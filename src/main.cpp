@@ -21,6 +21,9 @@ LiquidCrystal lcd(A0, A1, A2, A3, A4, A5);
 #define OFF       0
 #define ON        1
 
+void quarto1(void);
+void quarto2(void);
+/*** TECLADO*/
 char LeTecla(void);
 /*******    PARA USO DO DISPLAY    ***********************/
 void init_dsp(int l, int c);
@@ -34,8 +37,7 @@ int main(void)
   init_dsp(2, 16);
   putmessage(0, 0, "  Smart  Light  ");
   
-  DDRD = 0x0F;
-  PORTD = 0xFF;
+  DDRB = _BV(Q2) | _BV(Q1); // Configura como saida Q1 e Q2
   
   for (;;)
   {
@@ -43,12 +45,76 @@ int main(void)
     if (tecla != 0)
     {
       putnumber_i(1,0, tecla, 3);
+      switch (tecla)
+      {
+      case QUARTO_1:
+        quarto1(); // Chama a rotina do quarto 1
+        break;
+      case QUARTO_2:
+        quarto2(); // Chama a rotina do quarto 2
+        break;
+      case SALA_TV:
+        /* code */
+        break;
+      case SALA_JTR:
+        /* code */
+        break;
+      default: // As teclas nao configuradas passam por aqui
+        break;
+      }
     }
 
     _delay_ms(10);
   }
 }
 
+
+// ==> Rotina do QUARTO 1
+void quarto1(void) {
+  char tecla = LeTecla();
+  putmessage(1,0, "Press ON ou OFF");
+  while (tecla == 0) { // Fica preso aqui até apertar uma tecla
+    tecla = LeTecla();
+  }
+  if (tecla == LIGA)
+  {
+    SAIDA |= _BV(Q1);
+  } else if (tecla == DESLIGA) {
+    SAIDA &= ~_BV(Q1);
+  } else {
+    // tecla diferente apertada
+    // Nao faz nada
+  }
+
+  // Limpa o display
+  lcd.clear();
+}
+
+
+// ==> Rotina do QUARTO 2
+void quarto2(void) {
+  char tecla = LeTecla();
+  putmessage(1,0, "Press ON ou OFF");
+  while (tecla == 0) { // Fica preso aqui até apertar uma tecla
+    tecla = LeTecla();
+  }
+  if (tecla == LIGA)
+  {
+    SAIDA |= _BV(Q2);
+  } else if (tecla == DESLIGA) {
+    SAIDA &= ~_BV(Q2);
+  } else {
+    // tecla diferente apertada
+    // Nao faz nada
+  }
+
+  // Limpa o display
+  lcd.clear();
+}
+
+
+
+/*******    TECLADO                ***********************/
 char LeTecla(void)
 {
   unsigned char n, i, tecla = 0, linha;
@@ -57,8 +123,8 @@ char LeTecla(void)
                                  {'7', '8', '9', 'C'},
                                  {'*', '0', '#', 'D'}};
 
-  // DDRD = 0x0F;
-  // PORTD = 0xFF;
+  DDRD = 0x0F;
+  PORTD = 0xFF;
   for (n = 0; n < 4; n++)
   {
     COLUNA &= ~_BV(n);
