@@ -1,8 +1,20 @@
+/*
+ * Laboratório de Sistemas Embutidos Microprocessados – 2º Desafio
+ * ***************************
+ * 
+ * Alunos:
+ * - Arthur Siqueira - Graduando, Eng. Controle e Automação - PUC Minas
+ * - Guilherme Rodrigues - Graduando, Eng. Controle e Automação - PUC Minas
+ * 
+ * ***************************
+ * 
+ */
+
 #include <avr/io.h>
-#include <util/delay.h>
-#include <LiquidCrystal.h>
 #include <avr/interrupt.h>
+#include <LiquidCrystal.h>
 #include <Arduino.h>
+
 
 LiquidCrystal lcd(A0, A1, A2, A3, A4, A5);
 
@@ -20,19 +32,14 @@ LiquidCrystal lcd(A0, A1, A2, A3, A4, A5);
 #define DESLIGA   '#'
 #define OFF       0
 #define ON        1
-
 #define TIMER1_MODULE 0xFFFF
-
-// Delay no tinkercad em ms, usado em loops para aumentar a fluidez da simulacao
-#define DELAY_SIMULACAO_TINKERCAD 10
-#define _DELAY_TINKERCAD() (_delay_ms(DELAY_SIMULACAO_TINKERCAD))
-// #define _DELAY_TINKERCAD()
 
 #define _ltrans(x, xi, xm, yi, ym) (long)((long)(x - xi) * (long)(ym - yi)) / (long)(xm - xi) + yi
 
 void quarto1(void);
 void quarto2(void);
 void salajantar(void);
+void salatv(void);
 /*** TECLADO*/
 char LeTecla(void);
 /*******    PARA USO DO DISPLAY    ***********************/
@@ -40,6 +47,7 @@ void init_dsp(int l, int c);
 void putmessage(int l, int c, char *msg);
 void putnumber_i(int l, int c, long ni, int nd);
 void putnumber_f(int l, int c, float ni, int nd);
+void clearl1(void);
 
 
 // Colocada a funcao 'void setup' pois o tinkerkad dá bug ao usar o TIMER1 sem ela
@@ -47,43 +55,22 @@ void setup()
 // int main(void)
 {
   char tecla;
-  unsigned int result=0;
+  unsigned int result = 0;
   init_dsp(2, 16);
   putmessage(0, 0, "  Smart  Light  ");
-  
-  
 
-  // ICR1 = 0xFFFF;                           // Seta o TOP do timer1 de 16bit
-  // OCR1A = 0x3FFF;                          // set PWM for 25% duty cycle @ 16bit
-  // OCR1B = 0xBFFF;                          // set PWM for 75% duty cycle @ 16bit
-  // TCCR1A |= (1 << COM1A1) | (1 << COM1B1); // set none-inverting mode
-
-  // TCCR1A |= (1 << WGM11); // set Fast PWM mode using ICR1 as TOP
-  // TCCR1B |= (1 << WGM12) | (1 << WGM13);
-
-  // TCCR1B |= (1 << CS10); // START the timer with no prescaler
-
-  // // Configura como saida Q1 e Q2, e tambem os pinos OC1A(PB1) e OC1B(PB2)
-  // DDRB = _BV(Q2) | _BV(PORTB2) | _BV(PORTB1) | _BV(Q1);
-
-  ICR1    = TIMER1_MODULE-1; // define o periodo do PWM 4.096ms ((1/16e6)*1*65536 * 1000) 
-  TCCR1A  = _BV(COM1A1) | _BV(WGM11);// PWM em OC1A(PB1) modo fast PWM com OCR1A
-  // TCCR1B  = _BV(WGM13) | _BV(WGM12) | _BV(CS11); // FPS de 8
-  TCCR1B  = _BV(WGM13) | _BV(WGM12) | _BV(CS10); // FPS de 1
-	// DDRB    = _BV(DDB1);  // Configura OC1B como saida
-  DDRB = _BV(Q2) | _BV(DDB1) | _BV(Q1); // Configura como saida Q1 e Q2, e tambem os pinos OC1A(DDB1)
-  // result = _ltrans(100, 0, 100, 0, TIMER1_MODULE-1);
-  // OCR1A = result;
-  // OCR1A = (int)(_ltrans(50, 0, 100, 0, TIMER1_MODULE-1));
+  ICR1 = TIMER1_MODULE - 1;                         // define o periodo do PWM 4.096ms ((1/16e6)*1*65536 * 1000)
+  TCCR1A = _BV(COM1B1) | _BV(COM1A1) | _BV(WGM11);  // PWM em OC1A(PB1) modo fast PWM com OCR1A
+  TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10);     // FPS de 1
+  DDRB = _BV(Q2) | _BV(DDB2) | _BV(DDB1) | _BV(Q1); // Configura como saida Q1 e Q2, e tambem os pinos OC1A(DDB1)
   OCR1A = 0;
-
 
   for (;;)
   {
     tecla = LeTecla();
     if (tecla != 0)
     {
-      putnumber_i(1, 0, tecla, 3);
+      // putnumber_i(1, 0, tecla, 3); // Imprime a tecla pressionada
       switch (tecla)
       {
       case QUARTO_1:
@@ -93,70 +80,117 @@ void setup()
         quarto2(); // Chama a rotina do quarto 2
         break;
       case SALA_TV:
-        /* code */
+        salatv(); // Chama a rotina sala de tv
         break;
       case SALA_JTR:
-        salajantar();
+        salajantar(); // Chama a rotina sala de jantar
         break;
       default: // As teclas nao configuradas passam por aqui
         break;
       }
     }
-
-    _DELAY_TINKERCAD(); // Delay para melhorar a fluidez na simulacao do tinkercad
   }
 }
-
-
-// ==> Rotina do QUARTO 1
-void quarto1(void) {
-  char tecla = LeTecla();
-  putmessage(1,0, "Press ON ou OFF");
-  while (tecla == 0) { // Fica preso aqui até apertar uma tecla
-    tecla = LeTecla();
-    _DELAY_TINKERCAD(); // Delay para melhorar a fluidez na simulacao do tinkercad
-  }
-  if (tecla == LIGA)
-  {
-    SAIDA |= _BV(Q1);
-  } else if (tecla == DESLIGA) {
-    SAIDA &= ~_BV(Q1);
-  } else {
-    // tecla diferente apertada
-    // Nao faz nada
-  }
-
-  // Limpa o display
-  lcd.clear();
-  putmessage(0, 0, "  Smart  Light  ");
-}
-
 
 // Colocada a funcao 'void loop' pois o tinkerkad dá bug ao usar o TIMER1 sem ela
 void loop(){}
 
 
+// ==> Rotina do QUARTO 1
+void quarto1(void) {
+  char tecla = LeTecla();
+  
+  clearl1();
+  putmessage(1,0, "Press ON ou OFF");
+
+  while (tecla == 0)  // Fica preso aqui até apertar uma tecla
+  {
+    tecla = LeTecla();
+  }
+  if (tecla == LIGA)
+  {
+    SAIDA |= _BV(Q1);
+    clearl1();
+    putmessage(1, 0, "QUARTO 1 : ON");
+  }
+  else if (tecla == DESLIGA)
+  {
+    SAIDA &= ~_BV(Q1);
+    clearl1();
+    putmessage(1, 0, "QUARTO 1 : OFF");
+  } 
+  else  // tecla diferente apertada
+  {
+    clearl1();
+    putmessage(1, 0, "NADA EXECUTADO");
+  }
+}
+
+
 // ==> Rotina do QUARTO 2
 void quarto2(void) {
   char tecla = LeTecla();
+  clearl1();
   putmessage(1,0, "Press ON ou OFF");
+
   while (tecla == 0) { // Fica preso aqui até apertar uma tecla
     tecla = LeTecla();
-    _DELAY_TINKERCAD(); // Delay para melhorar a fluidez na simulacao do tinkercad
   }
   if (tecla == LIGA)
   {
     SAIDA |= _BV(Q2);
+    clearl1();
+    putmessage(1, 0, "QUARTO 2 : ON");
   } else if (tecla == DESLIGA) {
     SAIDA &= ~_BV(Q2);
+    clearl1();
+    putmessage(1, 0, "QUARTO 2 : OFF");
   } else {
-    // tecla diferente apertada
-    // Nao faz nada
+    clearl1();
+    putmessage(1, 0, "NADA EXECUTADO");
+  }
+}
+
+void salatv(void)
+{
+  unsigned int valor;
+  char tecla = LeTecla();
+  clearl1();
+  putmessage(1,0, "Pres. ON,OFF,0a9");
+
+  while (tecla == 0) { // Fica preso aqui até apertar uma tecla
+    tecla = LeTecla();
   }
 
-  // Limpa o display
-  lcd.clear();
-  putmessage(0, 0, "  Smart  Light  ");
+  if (tecla >= '1' && tecla <= '9') // Se é um numero
+  {
+    // Converte o caracter em valor numerico de 1 a 9 em seguida de 0 a 100 %
+    valor = _ltrans(tecla - '0', 0, 10, 0, TIMER1_MODULE-1);
+    OCR1B = valor;
+    clearl1();
+    putmessage(1, 0, "SALA TV:   %");
+    putnumber_i(1, 9, (tecla - '0') * 10, 2);
+  } 
+  else if (tecla == '0')
+  {
+    valor = _ltrans(10, 0, 10, 0, TIMER1_MODULE-1);
+    OCR1B = valor;
+    clearl1();
+    putmessage(1, 0, "SALA TV: 100%");
+  }
+  else if (tecla == DESLIGA)
+  {
+    valor = _ltrans(0, 0, 10, 0, TIMER1_MODULE-1);
+    OCR1B = valor;
+    clearl1();
+    putmessage(1, 0, "SALA TV: OFF");
+    
+  }
+  else
+  {
+    clearl1();
+    putmessage(1, 0, "NADA EXECUTADO");
+  }
 }
 
 
@@ -165,38 +199,42 @@ void salajantar(void)
   unsigned int valor;
   char tecla = LeTecla();
   
+  clearl1();
   putmessage(1,0, "Pres. ON,OFF,0a9");
 
-  while (tecla == 0) { // Fica preso aqui até apertar uma tecla
+  while (tecla == 0)  // Fica preso aqui até apertar uma tecla
+  {
     tecla = LeTecla();
-    _DELAY_TINKERCAD(); // Delay para melhorar a fluidez na simulacao do tinkercad
   }
 
-  if (tecla >= '0' && tecla <= '9') // Se é um numero
+  if (tecla >= '1' && tecla <= '9') // Se é um numero
   {
-    // Converte o caracter em valor numerico de 0 a 9 em seguida de 0 a 100 %
+    // Converte o caracter em valor numerico de 1 a 9 em seguida de 0 a 100 %
     valor = _ltrans(tecla - '0', 0, 10, 0, TIMER1_MODULE-1);
     OCR1A = valor;
+    clearl1();
+    putmessage(1, 0, "SALA JANTAR:   %");
+    putnumber_i(1, 13, (tecla - '0') * 10, 2);
   } 
-  else if (tecla == LIGA)
+  else if (tecla == '0')
   {
     valor = _ltrans(10, 0, 10, 0, TIMER1_MODULE-1);
     OCR1A = valor;
+    clearl1();
+    putmessage(1, 0, "SALA JANTAR:100%");
   }
   else if (tecla == DESLIGA)
   {
     valor = _ltrans(0, 0, 10, 0, TIMER1_MODULE-1);
     OCR1A = valor;
+    clearl1();
+    putmessage(1, 0, "SALA JANTAR: OFF");
   }
-  else
+  else // tecla diferente apertada
   {
-    // tecla diferente apertada
-    // Nao faz nada
+    clearl1();
+    putmessage(1, 0, "NADA EXECUTADO");
   }
-
-  // Limpa o display
-  lcd.clear();
-  putmessage(0, 0, "  Smart  Light  ");
 }
 
 
@@ -260,4 +298,8 @@ void putnumber_f(int l, int c, float ni, int nd)
 {
   lcd.setCursor(c, l);
   lcd.print(ni, nd);
+}
+
+void clearl1(void){
+  putmessage(1,0, "                "); // Limpa a linha 1 do display
 }
