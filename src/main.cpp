@@ -59,7 +59,7 @@ void setup()
   init_dsp(2, 16);
   putmessage(0, 0, "  Smart  Light  ");
 
-  ICR1 = TIMER1_MODULE - 1;                         // define o periodo do PWM 4.096ms ((1/16e6)*1*65536 * 1000)
+  ICR1 = TIMER1_MODULE;                         // define o periodo do PWM 4.096ms ((1/16e6)*1*65536 * 1000)
   TCCR1A = _BV(COM1B1) | _BV(COM1A1) | _BV(WGM11);  // PWM em OC1A(PB1) modo fast PWM com OCR1A
   TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10);     // FPS de 1
   DDRB = _BV(Q2) | _BV(DDB2) | _BV(DDB1) | _BV(Q1); // Configura como saida Q1 e Q2, e tambem os pinos OC1A(DDB1)
@@ -165,7 +165,7 @@ void salatv(void)
   if (tecla >= '1' && tecla <= '9') // Se é um numero
   {
     // Converte o caracter em valor numerico de 1 a 9 em seguida de 0 a 100 %
-    valor = _ltrans(tecla - '0', 0, 10, 0, TIMER1_MODULE-1);
+    valor = _ltrans(tecla - '0', 0, 10, 0, TIMER1_MODULE);
     OCR1B = valor;
     clearl1();
     putmessage(1, 0, "SALA TV:   %");
@@ -173,14 +173,14 @@ void salatv(void)
   } 
   else if (tecla == '0')
   {
-    valor = _ltrans(10, 0, 10, 0, TIMER1_MODULE-1);
+    valor = _ltrans(10, 0, 10, 0, TIMER1_MODULE);
     OCR1B = valor;
     clearl1();
     putmessage(1, 0, "SALA TV: 100%");
   }
   else if (tecla == DESLIGA)
   {
-    valor = _ltrans(0, 0, 10, 0, TIMER1_MODULE-1);
+    valor = _ltrans(0, 0, 10, 0, TIMER1_MODULE);
     OCR1B = valor;
     clearl1();
     putmessage(1, 0, "SALA TV: OFF");
@@ -210,7 +210,7 @@ void salajantar(void)
   if (tecla >= '1' && tecla <= '9') // Se é um numero
   {
     // Converte o caracter em valor numerico de 1 a 9 em seguida de 0 a 100 %
-    valor = _ltrans(tecla - '0', 0, 10, 0, TIMER1_MODULE-1);
+    valor = _ltrans(tecla - '0', 0, 10, 0, TIMER1_MODULE);
     OCR1A = valor;
     clearl1();
     putmessage(1, 0, "SALA JANTAR:   %");
@@ -218,14 +218,14 @@ void salajantar(void)
   } 
   else if (tecla == '0')
   {
-    valor = _ltrans(10, 0, 10, 0, TIMER1_MODULE-1);
+    valor = _ltrans(10, 0, 10, 0, TIMER1_MODULE);
     OCR1A = valor;
     clearl1();
     putmessage(1, 0, "SALA JANTAR:100%");
   }
   else if (tecla == DESLIGA)
   {
-    valor = _ltrans(0, 0, 10, 0, TIMER1_MODULE-1);
+    valor = _ltrans(0, 0, 10, 0, TIMER1_MODULE);
     OCR1A = valor;
     clearl1();
     putmessage(1, 0, "SALA JANTAR: OFF");
